@@ -22,15 +22,21 @@
 
 package no.nordicsemi.android.nrfmesh.node;
 
+import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.database.DataSetObserver;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import javax.inject.Inject;
 
@@ -42,25 +48,40 @@ import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import fr.castorflex.android.smoothprogressbar.SmoothProgressDrawable;
+import no.nordicsemi.android.mesh.ApplicationKey;
+import no.nordicsemi.android.mesh.Group;
 import no.nordicsemi.android.mesh.MeshNetwork;
+import no.nordicsemi.android.mesh.models.GenericLevelServerModel;
 import no.nordicsemi.android.mesh.models.SigModelParser;
 import no.nordicsemi.android.mesh.transport.ConfigCompositionDataGet;
 import no.nordicsemi.android.mesh.transport.ConfigCompositionDataStatus;
 import no.nordicsemi.android.mesh.transport.ConfigDefaultTtlGet;
 import no.nordicsemi.android.mesh.transport.ConfigDefaultTtlSet;
 import no.nordicsemi.android.mesh.transport.ConfigDefaultTtlStatus;
+import no.nordicsemi.android.mesh.transport.ConfigModelAppBind;
+import no.nordicsemi.android.mesh.transport.ConfigModelAppStatus;
 import no.nordicsemi.android.mesh.transport.ConfigNodeReset;
 import no.nordicsemi.android.mesh.transport.ConfigNodeResetStatus;
 import no.nordicsemi.android.mesh.transport.ConfigProxyGet;
 import no.nordicsemi.android.mesh.transport.ConfigProxySet;
 import no.nordicsemi.android.mesh.transport.ConfigProxyStatus;
 import no.nordicsemi.android.mesh.transport.Element;
+import no.nordicsemi.android.mesh.transport.GenericLevelStatus;
 import no.nordicsemi.android.mesh.transport.MeshMessage;
 import no.nordicsemi.android.mesh.transport.MeshModel;
 import no.nordicsemi.android.mesh.transport.ProvisionedMeshNode;
 import no.nordicsemi.android.mesh.transport.ProxyConfigFilterStatus;
+import no.nordicsemi.android.mesh.utils.MeshAddress;
+import no.nordicsemi.android.nrfmesh.GroupCallbacks;
 import no.nordicsemi.android.nrfmesh.R;
 import no.nordicsemi.android.nrfmesh.di.Injectable;
 import no.nordicsemi.android.nrfmesh.dialog.DialogFragmentConfigurationComplete;
@@ -70,12 +91,14 @@ import no.nordicsemi.android.nrfmesh.dialog.DialogFragmentTransactionStatus;
 import no.nordicsemi.android.nrfmesh.keys.AddAppKeysActivity;
 import no.nordicsemi.android.nrfmesh.keys.AddNetKeysActivity;
 import no.nordicsemi.android.nrfmesh.node.adapter.ElementAdapter;
+import no.nordicsemi.android.nrfmesh.node.dialog.DestinationAddressCallbacks;
 import no.nordicsemi.android.nrfmesh.node.dialog.DialogFragmentElementName;
 import no.nordicsemi.android.nrfmesh.node.dialog.DialogFragmentNodeName;
 import no.nordicsemi.android.nrfmesh.node.dialog.DialogFragmentResetNode;
 import no.nordicsemi.android.nrfmesh.provisioners.dialogs.DialogFragmentTtl;
 import no.nordicsemi.android.nrfmesh.utils.Utils;
 import no.nordicsemi.android.nrfmesh.viewmodels.NodeConfigurationViewModel;
+import no.nordicsemi.android.nrfmesh.viewmodels.PublicationViewModel;
 
 public class NodeConfigurationActivity extends AppCompatActivity implements Injectable,
         DialogFragmentNodeName.DialogFragmentNodeNameListener,
@@ -84,15 +107,14 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         DialogFragmentProxySet.DialogFragmentProxySetListener,
         ElementAdapter.OnItemClickListener,
         DialogFragmentResetNode.DialogFragmentNodeResetListener,
-        DialogFragmentConfigurationComplete.ConfigurationCompleteListener {
+        DialogFragmentConfigurationComplete.ConfigurationCompleteListener, GroupCallbacks, DestinationAddressCallbacks {
 
     private static final String PROGRESS_BAR_STATE = "PROGRESS_BAR_STATE";
     private static final String PROXY_STATE = "PROXY_STATE";
     private static final String REQUESTED_PROXY_STATE = "REQUESTED_PROXY_STATE";
-
+    private final List<Element> mElements = new ArrayList<>();
     @Inject
     ViewModelProvider.Factory mViewModelFactory;
-
     @BindView(R.id.container)
     CoordinatorLayout mContainer;
     @BindView(R.id.action_get_composition_data)
@@ -115,13 +137,11 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
     RecyclerView mRecyclerViewElements;
     @BindView(R.id.configuration_progress_bar)
     ProgressBar mProgressbar;
-
+    // FOR ISAE
+    ProvisionedMeshNode provisionedMeshNode;
+    PublicationViewModel pViewModel;
     private NodeConfigurationViewModel mViewModel;
     private Handler mHandler;
-    private boolean mProxyState;
-    private boolean mRequestedState = true;
-    private boolean mIsConnected;
-
     private final Runnable mRunnableOperationTimeout = () -> {
         hideProgressBar();
         if (mViewModel.isActivityVisibile()) {
@@ -130,6 +150,9 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
             fragmentMessage.show(getSupportFragmentManager(), null);
         }
     };
+    private boolean mProxyState;
+    private boolean mRequestedState = true;
+    private boolean mIsConnected;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -186,6 +209,27 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         adapter.setHasStableIds(true);
         adapter.setOnItemClickListener(this);
         mRecyclerViewElements.setAdapter(adapter);
+        adapter.registerAdapterDataObserver(new RecyclerView.AdapterDataObserver() {
+            @Override
+            public void onChanged() {
+                super.onChanged();
+                mViewModel.getSelectedMeshNode().observe(NodeConfigurationActivity.this, meshNode -> {
+                    if (meshNode != null) {
+                        provisionedMeshNode = meshNode;
+                        mElements.clear();
+                        mElements.addAll(provisionedMeshNode.getElements().values());
+                    }
+                });
+            }
+        });
+
+        // ISAE Buttons
+        Button confRelay = findViewById(R.id.btnConfRelay);
+        Button confLPN = findViewById(R.id.btnConfLPN);
+        Button confGateway = findViewById(R.id.btnConfGateway);
+        confRelay.setOnClickListener(view -> {
+            configureAsISAERelay();
+        });
 
         final View containerNetKey = findViewById(R.id.container_net_keys);
         containerNetKey.findViewById(R.id.image)
@@ -333,6 +377,7 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
             mIsConnected = isConnectedToNetwork;
         }
         invalidateOptionsMenu();
+
     }
 
     @Override
@@ -499,6 +544,8 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
             mProxyState = status.isProxyFeatureEnabled();
             updateProxySettingsCardUi();
             hideProgressBar();
+        } else if (meshMessage instanceof ConfigModelAppStatus) {
+            hideProgressBar();
         }
     }
 
@@ -530,7 +577,8 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
             hideProgressBar();
             final DialogFragmentError message = DialogFragmentError.
                     newInstance(getString(R.string.title_error), ex.getMessage());
-            message.show(getSupportFragmentManager(), null);
+            if (!ex.getMessage().contains("timed"))
+                message.show(getSupportFragmentManager(), null);
         }
     }
 
@@ -546,5 +594,176 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         final ConfigProxySet configProxySet = new ConfigProxySet(state);
         sendMessage(configProxySet);
         mRequestedState = state == 1;
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mViewModel.getSelectedMeshNode().observe(this, meshNode -> {
+            if (meshNode != null) {
+                provisionedMeshNode = meshNode;
+                mElements.clear();
+                mElements.addAll(provisionedMeshNode.getElements().values());
+            }
+        });
+    }
+
+    @Override
+    public Group createGroup() {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        return network.createGroup(network.getSelectedProvisioner(), "Mesh Group");
+    }
+
+    @Override
+    public Group createGroup(@NonNull final String name) {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        return network.createGroup(network.getSelectedProvisioner(), name);
+    }
+
+    @Override
+    public Group createGroup(@NonNull final UUID uuid, final String name) {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        return network.createGroup(uuid, null, name);
+    }
+
+    @Override
+    public boolean onGroupAdded(@NonNull final String name, final int address) {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        final Group group = network.createGroup(network.getSelectedProvisioner(), address, name);
+        if (group != null) {
+            return network.addGroup(group);
+        }
+        return false;
+    }
+
+    @Override
+    public boolean onGroupAdded(@NonNull final Group group) {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        return network.addGroup(group);
+    }
+
+
+    private void configureAsISAERelay() {
+        ProgressDialog pd = new ProgressDialog(NodeConfigurationActivity.this);
+        try {
+            if (mIsConnected) {
+                // Add groups
+                pd.setMessage("Hold on...");
+                pd.setIndeterminateDrawable(new SmoothProgressDrawable.Builder(this)
+                        .color(0xff0000)
+                        .interpolator(new DecelerateInterpolator())
+                        .sectionsCount(4)
+                        .separatorLength(8)         //You should use Resources#getDimensionPixelSize
+                        .strokeWidth(8f)            //You should use Resources#getDimension
+                        .speed(2f)                 //2 times faster
+                        .progressiveStartSpeed(2)
+                        .progressiveStopSpeed(3.4f)
+                        .reversed(false)
+                        .mirrorMode(false)
+                        .progressiveStart(true)
+                        .build());
+                pd.show();
+                pd.setCancelable(false);
+                addGroups();
+
+                final Handler handler = new Handler();
+                bindKeys(5, 0); // SOS
+                publishToModel(5,0, Integer.valueOf("C000", 16));
+                handler.postDelayed(() -> {
+                    bindKeys(1, 0); // Tick Tock
+                    handler.postDelayed(() -> {
+                        bindKeys(1, 1); // Social Distancing
+                        handler.postDelayed(() -> {
+                            bindKeys(2, 0); // Here
+                            handler.postDelayed(() -> {
+                                bindKeys(3, 0);// Left
+                                handler.postDelayed(() -> {
+                                    bindKeys(4, 0);// Detect
+                                    handler.postDelayed(() -> {
+                                        pd.dismiss();
+                                    }, 1000);
+                                }, 1000);
+                            }, 1000);
+                        }, 1000);
+                    }, 1000);
+                }, 1000);
+            } else {
+                Toast.makeText(getApplicationContext(), "Please connect to the device!", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if(pd.isShowing())pd.dismiss();
+            Log.e("ERROR", Objects.requireNonNull(e.getMessage()));
+        }
+    }
+
+
+    private void addGroups() {
+        try {
+            onGroupAdded("SOS", Integer.valueOf("C000", 16));
+            onGroupAdded("TickTock", Integer.valueOf("C001", 16));
+            onGroupAdded("Social Distancing", Integer.valueOf("C002", 16));
+            onGroupAdded("SD_Adv", Integer.valueOf("C003", 16));
+            onGroupAdded("Here", Integer.valueOf("C004", 16));
+            onGroupAdded("Left", Integer.valueOf("C005", 16));
+            onGroupAdded("Detect", Integer.valueOf("C006", 16));
+        } catch (IllegalArgumentException e) {
+            Log.e("ISAE", "Groups already exist, proceeding");
+        }
+
+    }
+
+    private void bindKeys(int elemIndex, int modelIndex) {
+        final MeshModel meshModel = new ArrayList<>(
+                mElements.get(elemIndex).getMeshModels().values()).get(modelIndex);
+
+        mViewModel.setSelectedElement(mElements.get(elemIndex));
+        mViewModel.setSelectedModel(meshModel);
+
+        // Bind the app key
+        ApplicationKey key = mViewModel.getNetworkLiveData().getAppKeys().get(0);
+        final ConfigModelAppBind configModelAppUnbind = new ConfigModelAppBind(mElements.get(elemIndex).
+                getElementAddress(), meshModel.getModelId(), key.getKeyIndex());
+        sendMessage(configModelAppUnbind);
+    }
+
+    private void publishToModel(int elemIndex, int modelIndex, int address) {
+        final MeshModel meshModel = new ArrayList<>(
+                mElements.get(elemIndex).getMeshModels().values()).get(modelIndex);
+        mViewModel.setSelectedElement(mElements.get(elemIndex));
+        mViewModel.setSelectedModel(meshModel);
+        pViewModel = new ViewModelProvider(this, mViewModelFactory).get(PublicationViewModel.class);
+        pViewModel.setLabelUUID(null);
+        pViewModel.setPublishAddress(address);
+        onDestinationAddressSet(address);
+        setPublication();
+    }
+
+    private void setPublication() {
+        final ProvisionedMeshNode node = mViewModel.getSelectedMeshNode().getValue();
+        if (node != null) {
+            final MeshMessage configModelPublicationSet = pViewModel.createMessage();
+            if (configModelPublicationSet != null) {
+                try {
+                    mViewModel
+                            .getMeshManagerApi()
+                            .createMeshPdu(node.getUnicastAddress(),
+                                    configModelPublicationSet);
+                } catch (IllegalArgumentException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    @Override
+    public void onDestinationAddressSet(int address) {
+        pViewModel.setLabelUUID(null);
+        pViewModel.setPublishAddress(address);
+    }
+
+    @Override
+    public void onDestinationAddressSet(@NonNull Group group) {
+
     }
 }

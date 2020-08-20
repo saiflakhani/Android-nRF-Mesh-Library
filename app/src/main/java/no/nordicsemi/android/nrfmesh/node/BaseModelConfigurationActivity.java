@@ -25,6 +25,7 @@ package no.nordicsemi.android.nrfmesh.node;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -206,6 +207,8 @@ public abstract class BaseModelConfigurationActivity extends AppCompatActivity i
             bindAppKeysIntent.putExtra(EXTRA_DATA, BIND_APP_KEY);
             startActivityForResult(bindAppKeysIntent, SELECT_KEY);
         });
+
+//        Log.e("ISAE", getIntent().getStringExtra("ISAE"));
 
         mPublishAddressView.setText(R.string.none);
         mActionSetPublication.setOnClickListener(v -> navigateToPublication());

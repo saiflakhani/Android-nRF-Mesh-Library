@@ -71,6 +71,7 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.0-beta7'
     implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
 
+
     // Butter Knife
     implementation 'com.jakewharton:butterknife:10.2.1'
     annotationProcessor 'com.jakewharton:butterknife-compiler:10.2.1'
@@ -78,6 +79,9 @@ dependencies {
     implementation 'no.nordicsemi.android.support.v18:scanner:1.4.3'
     // Android BLE Library
     implementation 'no.nordicsemi.android:ble:2.1.1'
+
+    // Smooth Progress Dialog
+    implementation 'com.github.castorflex.smoothprogressbar:library:1.1.0'
 
     implementation 'com.google.dagger:dagger:2.27'
     implementation 'com.google.dagger:dagger-android:2.27'

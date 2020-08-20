@@ -181,6 +181,7 @@ public class DialogFragmentCreateGroup extends DialogFragment {
                     if (mGroup == null) {
                         final String address = addressInput.getEditableText().toString().trim();
                         if (validateInput(name, address)) {
+                            int meow = Integer.valueOf(address, 16);
                             if (((GroupCallbacks) requireParentFragment()).onGroupAdded(name, Integer.valueOf(address, 16))) {
                                 dismiss();
                             } else {

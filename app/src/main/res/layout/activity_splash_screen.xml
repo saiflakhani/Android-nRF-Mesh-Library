@@ -41,5 +41,5 @@
         android:fitsSystemWindows="true"
         android:scaleType="centerCrop"
         android:background="@color/colorNordicLogoTop"
-        app:srcCompat="@drawable/nordic_logo"/>
+        app:srcCompat="@drawable/splash"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
