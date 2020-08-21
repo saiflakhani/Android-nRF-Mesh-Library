@@ -97,6 +97,7 @@ import no.nordicsemi.android.nrfmesh.node.dialog.DialogFragmentNodeName;
 import no.nordicsemi.android.nrfmesh.node.dialog.DialogFragmentResetNode;
 import no.nordicsemi.android.nrfmesh.provisioners.dialogs.DialogFragmentTtl;
 import no.nordicsemi.android.nrfmesh.utils.Utils;
+import no.nordicsemi.android.nrfmesh.viewmodels.ModelConfigurationViewModel;
 import no.nordicsemi.android.nrfmesh.viewmodels.NodeConfigurationViewModel;
 import no.nordicsemi.android.nrfmesh.viewmodels.PublicationViewModel;
 
@@ -138,9 +139,10 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
     @BindView(R.id.configuration_progress_bar)
     ProgressBar mProgressbar;
     // FOR ISAE
-    ProvisionedMeshNode provisionedMeshNode;
-    PublicationViewModel pViewModel;
+    private ProvisionedMeshNode provisionedMeshNode;
+    private PublicationViewModel pViewModel;
     private NodeConfigurationViewModel mViewModel;
+    private ModelConfigurationViewModel mcViewModel;
     private Handler mHandler;
     private final Runnable mRunnableOperationTimeout = () -> {
         hideProgressBar();
@@ -160,7 +162,8 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         setContentView(R.layout.activity_node_configuration);
         ButterKnife.bind(this);
         mViewModel = new ViewModelProvider(this, mViewModelFactory).get(NodeConfigurationViewModel.class);
-
+        pViewModel = new ViewModelProvider(this, mViewModelFactory).get(PublicationViewModel.class);
+        mcViewModel = new ViewModelProvider(this, mViewModelFactory).get(ModelConfigurationViewModel.class);
         if (savedInstanceState != null) {
             if (savedInstanceState.getBoolean(PROGRESS_BAR_STATE)) {
                 mProgressbar.setVisibility(View.VISIBLE);
@@ -227,9 +230,10 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         Button confRelay = findViewById(R.id.btnConfRelay);
         Button confLPN = findViewById(R.id.btnConfLPN);
         Button confGateway = findViewById(R.id.btnConfGateway);
-        confRelay.setOnClickListener(view -> {
-            configureAsISAERelay();
-        });
+//        confRelay.setOnClickListener(view -> {
+//            configureAsISAERelay();
+//        });
+        confLPN.setOnClickListener(view -> {configureAsISAELPN();});
 
         final View containerNetKey = findViewById(R.id.container_net_keys);
         containerNetKey.findViewById(R.id.image)
@@ -642,6 +646,75 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         return network.addGroup(group);
     }
 
+    private void configureAsISAELPN(){
+        ProgressDialog pd = new ProgressDialog(NodeConfigurationActivity.this);
+        try {
+            if (mIsConnected) {
+                // Add groups
+                pd.setMessage("Hold on...");
+                pd.setIndeterminateDrawable(new SmoothProgressDrawable.Builder(this)
+                        .color(0xff0000)
+                        .interpolator(new DecelerateInterpolator())
+                        .sectionsCount(4)
+                        .separatorLength(8)         //You should use Resources#getDimensionPixelSize
+                        .strokeWidth(8f)            //You should use Resources#getDimension
+                        .speed(2f)                 //2 times faster
+                        .progressiveStartSpeed(2)
+                        .progressiveStopSpeed(3.4f)
+                        .reversed(false)
+                        .mirrorMode(false)
+                        .progressiveStart(true)
+                        .build());
+                pd.show();
+                pd.setCancelable(false);
+                addGroups();
+                bindKeys(1, 1);
+                mHandler.postDelayed(() -> {publishToModel(1,1, Integer.valueOf("C002", 16));}, 5000);
+                Handler handler2 = new Handler();
+                handler2.postDelayed(() -> bindKeys(2, 0), 10000);
+                Handler handler3 = new Handler();
+                handler3.postDelayed(() -> publishToModel(2,0, Integer.valueOf("C000", 16)), 15000);
+                Handler handler4 = new Handler();
+                handler4.postDelayed(() -> bindKeys(0, 2), 20000);
+                Handler handler5 = new Handler();
+                handler5.postDelayed(() -> publishToModel(0,2, Integer.valueOf("C003", 16)), 25000);
+                Handler handler6 = new Handler();
+                handler6.postDelayed(() -> bindKeys(1,0), 30000);
+                final Handler handler = new Handler();
+                handler.postDelayed(pd::dismiss, 35000);
+
+
+//                final Handler handler = new Handler();
+//                bindKeys(2, 0); // SOS
+//                handler.postDelayed(() -> {
+//                    bindKeys(1, 0); // Tick Tock
+//                    handler.postDelayed(() -> {
+//                        bindKeys(1, 1); // Social Distancing
+//                        handler.postDelayed(() -> {
+//                            bindKeys(0, 2);// SD_ADV
+//                            handler.postDelayed(() -> {
+////                                publishToModel(2,0, Integer.valueOf("C000", 16));
+//                                handler.postDelayed(() -> {
+//                                    publishToModel(1,1, Integer.valueOf("C002", 16));
+//                                    handler.postDelayed(() -> {
+////                                        publishToModel(0,2, Integer.valueOf("C003", 16));
+//                                        handler.postDelayed(pd::dismiss, 4000);
+//                                    }, 10000);
+//                                }, 10000);
+//                            }, 10000);
+//                        }, 5000);
+//                    }, 5000);
+//                }, 5000);
+            } else {
+                Toast.makeText(getApplicationContext(), "Please connect to the device!", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if(pd.isShowing())pd.dismiss();
+            Log.e("ERROR", Objects.requireNonNull(e.getMessage()));
+        }
+    }
+
 
     private void configureAsISAERelay() {
         ProgressDialog pd = new ProgressDialog(NodeConfigurationActivity.this);
@@ -719,6 +792,7 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
 
         mViewModel.setSelectedElement(mElements.get(elemIndex));
         mViewModel.setSelectedModel(meshModel);
+//        mcViewModel.getMessageQueue().clear();
 
         // Bind the app key
         ApplicationKey key = mViewModel.getNetworkLiveData().getAppKeys().get(0);
@@ -730,28 +804,35 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
     private void publishToModel(int elemIndex, int modelIndex, int address) {
         final MeshModel meshModel = new ArrayList<>(
                 mElements.get(elemIndex).getMeshModels().values()).get(modelIndex);
-        mViewModel.setSelectedElement(mElements.get(elemIndex));
-        mViewModel.setSelectedModel(meshModel);
-        pViewModel = new ViewModelProvider(this, mViewModelFactory).get(PublicationViewModel.class);
+
+//        mViewModel.setSelectedElement(mElements.get(elemIndex));
+//        mViewModel.setSelectedModel(meshModel);
+        mcViewModel.getMessageQueue().clear();
         pViewModel.setLabelUUID(null);
         pViewModel.setPublishAddress(address);
+        pViewModel.setSelectedElement(mElements.get(elemIndex));
+        pViewModel.setSelectedModel(meshModel);
         onDestinationAddressSet(address);
         setPublication();
     }
 
     private void setPublication() {
-        final ProvisionedMeshNode node = mViewModel.getSelectedMeshNode().getValue();
+        final ProvisionedMeshNode node = pViewModel.getSelectedMeshNode().getValue();
         if (node != null) {
+//            pViewModel.setSelectedMeshNode(node);
             final MeshMessage configModelPublicationSet = pViewModel.createMessage();
             if (configModelPublicationSet != null) {
                 try {
-                    mViewModel
+                    pViewModel
                             .getMeshManagerApi()
                             .createMeshPdu(node.getUnicastAddress(),
                                     configModelPublicationSet);
                 } catch (IllegalArgumentException ex) {
+                    Log.e("ISAE", ex.getMessage());
                     ex.printStackTrace();
                 }
+            }else{
+                Log.e("ISAE", "ConfigModel is null");
             }
         }
     }
