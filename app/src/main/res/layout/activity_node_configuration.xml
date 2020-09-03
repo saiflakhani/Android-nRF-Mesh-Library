@@ -82,15 +82,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:weightSum="3">
-                    <Button
-                        android:id="@+id/btnConfRelay"
-                        android:layout_width="0dp"
-                        android:layout_marginLeft="5dp"
-                        android:layout_marginRight="5dp"
-                        android:layout_weight="1"
-                        style="@style/Widget.AppCompat.Button.Colored"
-                        android:layout_height="wrap_content"
-                        android:text="Configure\nRelay"/>
+
                     <Button
                         android:id="@+id/btnConfLPN"
                         android:layout_width="0dp"
@@ -100,6 +92,17 @@
                         style="@style/Widget.AppCompat.Button.Colored"
                         android:layout_height="wrap_content"
                         android:text="Configure\nLPN"/>
+
+                    <Button
+                        android:id="@+id/btnConfRelay"
+                        android:layout_width="0dp"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginRight="5dp"
+                        android:layout_weight="1"
+                        style="@style/Widget.AppCompat.Button.Colored"
+                        android:layout_height="wrap_content"
+                        android:text="Configure\nRelay"/>
+
                     <Button
                         android:id="@+id/btnConfGateway"
                         android:layout_width="0dp"

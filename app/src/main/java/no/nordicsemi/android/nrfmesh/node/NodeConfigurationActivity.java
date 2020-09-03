@@ -69,6 +69,8 @@ import no.nordicsemi.android.mesh.transport.ConfigDefaultTtlSet;
 import no.nordicsemi.android.mesh.transport.ConfigDefaultTtlStatus;
 import no.nordicsemi.android.mesh.transport.ConfigModelAppBind;
 import no.nordicsemi.android.mesh.transport.ConfigModelAppStatus;
+import no.nordicsemi.android.mesh.transport.ConfigModelSubscriptionAdd;
+import no.nordicsemi.android.mesh.transport.ConfigModelSubscriptionVirtualAddressAdd;
 import no.nordicsemi.android.mesh.transport.ConfigNodeReset;
 import no.nordicsemi.android.mesh.transport.ConfigNodeResetStatus;
 import no.nordicsemi.android.mesh.transport.ConfigProxyGet;
@@ -230,10 +232,15 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         Button confRelay = findViewById(R.id.btnConfRelay);
         Button confLPN = findViewById(R.id.btnConfLPN);
         Button confGateway = findViewById(R.id.btnConfGateway);
-//        confRelay.setOnClickListener(view -> {
-//            configureAsISAERelay();
-//        });
-        confLPN.setOnClickListener(view -> {configureAsISAELPN();});
+        confRelay.setOnClickListener(view -> {
+            configureAsISAERelay();
+        });
+        confLPN.setOnClickListener(view -> {
+            configureAsISAELPN();
+        });
+        confGateway.setOnClickListener(view -> {
+            configureAsISAEGateway();
+        });
 
         final View containerNetKey = findViewById(R.id.container_net_keys);
         containerNetKey.findViewById(R.id.image)
@@ -484,6 +491,7 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         return true;
     }
 
+
     private void updateProxySettingsCardUi() {
         final ProvisionedMeshNode meshNode = mViewModel.getSelectedMeshNode().getValue();
         if (meshNode != null && meshNode.getNodeFeatures() != null && meshNode.getNodeFeatures().isProxyFeatureSupported()) {
@@ -646,7 +654,7 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         return network.addGroup(group);
     }
 
-    private void configureAsISAELPN(){
+    private void configureAsISAELPN() {
         ProgressDialog pd = new ProgressDialog(NodeConfigurationActivity.this);
         try {
             if (mIsConnected) {
@@ -669,48 +677,30 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                 pd.setCancelable(false);
                 addGroups();
                 bindKeys(1, 1);
-                mHandler.postDelayed(() -> {publishToModel(1,1, Integer.valueOf("C002", 16));}, 5000);
+                mHandler.postDelayed(() -> {
+                    publishToModel(1, 1, Integer.valueOf("C002", 16));
+                }, 5000);
                 Handler handler2 = new Handler();
                 handler2.postDelayed(() -> bindKeys(2, 0), 10000);
                 Handler handler3 = new Handler();
-                handler3.postDelayed(() -> publishToModel(2,0, Integer.valueOf("C000", 16)), 15000);
+                handler3.postDelayed(() -> publishToModel(2, 0, Integer.valueOf("C000", 16)), 15000);
                 Handler handler4 = new Handler();
                 handler4.postDelayed(() -> bindKeys(0, 2), 20000);
                 Handler handler5 = new Handler();
-                handler5.postDelayed(() -> publishToModel(0,2, Integer.valueOf("C003", 16)), 25000);
+                handler5.postDelayed(() -> publishToModel(0, 2, Integer.valueOf("C003", 16)), 25000);
                 Handler handler6 = new Handler();
-                handler6.postDelayed(() -> bindKeys(1,0), 30000);
+                handler6.postDelayed(() -> bindKeys(1, 0), 30000);
+                new Handler().postDelayed(() -> {
+                    subscribeModel(1, 0, Integer.valueOf("C001", 16));
+                }, 35000);
                 final Handler handler = new Handler();
-                handler.postDelayed(pd::dismiss, 35000);
-
-
-//                final Handler handler = new Handler();
-//                bindKeys(2, 0); // SOS
-//                handler.postDelayed(() -> {
-//                    bindKeys(1, 0); // Tick Tock
-//                    handler.postDelayed(() -> {
-//                        bindKeys(1, 1); // Social Distancing
-//                        handler.postDelayed(() -> {
-//                            bindKeys(0, 2);// SD_ADV
-//                            handler.postDelayed(() -> {
-////                                publishToModel(2,0, Integer.valueOf("C000", 16));
-//                                handler.postDelayed(() -> {
-//                                    publishToModel(1,1, Integer.valueOf("C002", 16));
-//                                    handler.postDelayed(() -> {
-////                                        publishToModel(0,2, Integer.valueOf("C003", 16));
-//                                        handler.postDelayed(pd::dismiss, 4000);
-//                                    }, 10000);
-//                                }, 10000);
-//                            }, 10000);
-//                        }, 5000);
-//                    }, 5000);
-//                }, 5000);
+                handler.postDelayed(pd::dismiss, 40000);
             } else {
                 Toast.makeText(getApplicationContext(), "Please connect to the device!", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            if(pd.isShowing())pd.dismiss();
+            if (pd.isShowing()) pd.dismiss();
             Log.e("ERROR", Objects.requireNonNull(e.getMessage()));
         }
     }
@@ -736,36 +726,178 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                         .progressiveStart(true)
                         .build());
                 pd.show();
-                pd.setCancelable(false);
+                pd.setCancelable(true);
                 addGroups();
 
-                final Handler handler = new Handler();
                 bindKeys(5, 0); // SOS
-                publishToModel(5,0, Integer.valueOf("C000", 16));
-                handler.postDelayed(() -> {
-                    bindKeys(1, 0); // Tick Tock
-                    handler.postDelayed(() -> {
-                        bindKeys(1, 1); // Social Distancing
-                        handler.postDelayed(() -> {
-                            bindKeys(2, 0); // Here
-                            handler.postDelayed(() -> {
-                                bindKeys(3, 0);// Left
-                                handler.postDelayed(() -> {
-                                    bindKeys(4, 0);// Detect
-                                    handler.postDelayed(() -> {
-                                        pd.dismiss();
-                                    }, 1000);
-                                }, 1000);
-                            }, 1000);
-                        }, 1000);
-                    }, 1000);
-                }, 1000);
+                new Handler().postDelayed(() -> {
+                    publishToModel(5, 0, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "1 done");
+                }, 5000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(5, 0, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "Subscribe SOS done");
+                }, 10000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(1, 0);
+                    Log.e("ISAE", "bind tick tock done");
+                }, 15000); // Tick Tock
+
+                new Handler().postDelayed(() -> {
+                    publishToModel(1, 0, Integer.valueOf("C001", 16));
+                    Log.e("ISAE", "publish tick tock done");
+                }, 20000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(1, 1);
+                    Log.e("ISAE", "bind SD done");
+                }, 25000); // Social Distancing
+
+                new Handler().postDelayed(() -> {
+                    publishToModel(1, 1, Integer.valueOf("C002", 16));
+                    Log.e("ISAE", "Publish SD done");
+                }, 30000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(1, 1, Integer.valueOf("C002", 16));
+                    Log.e("ISAE", "Subscribe SD Done");
+                }, 35000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(2, 0);
+                    Log.e("ISAE", "Bind here done");
+                }, 40000); // Here
+
+                new Handler().postDelayed(() -> {
+                    publishToModel(2, 0, Integer.valueOf("C004", 16));
+                    Log.e("ISAE", "Publish Here done");
+                }, 45000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(2, 0, Integer.valueOf("C004", 16));
+                    Log.e("ISAE", "Subscribe Here Done");
+                }, 50000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(3, 0);
+                    Log.e("ISAE", "Bind left done");
+                }, 55000); // Left
+
+                new Handler().postDelayed(() -> {
+                    publishToModel(3, 0, Integer.valueOf("C005", 16));
+                    Log.e("ISAE", "Publish left done");
+                }, 60000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(3, 0, Integer.valueOf("C005", 16));
+                    Log.e("ISAE", "Subscribe left Done");
+                }, 65000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(4, 0);
+                    Log.e("ISAE", "Bind detect done");
+                }, 70000); // Detect
+
+                new Handler().postDelayed(() -> {
+                    publishToModel(4, 0, Integer.valueOf("C006", 16));
+                    Log.e("ISAE", "publish detect done");
+                }, 75000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(4, 0, Integer.valueOf("C006", 16));
+                    Log.e("ISAE", "Subscribe detect Done");
+                }, 80000);
+
+                new Handler().postDelayed(pd::dismiss, 85000);
+
+
             } else {
                 Toast.makeText(getApplicationContext(), "Please connect to the device!", Toast.LENGTH_SHORT).show();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            if(pd.isShowing())pd.dismiss();
+            if (pd.isShowing()) pd.dismiss();
+            Log.e("ERROR", Objects.requireNonNull(e.getMessage()));
+        }
+    }
+
+    private void configureAsISAEGateway() {
+        ProgressDialog pd = new ProgressDialog(NodeConfigurationActivity.this);
+        try {
+            if (mIsConnected) {
+                // Add groups
+                pd.setMessage("Hold on...");
+                pd.setIndeterminateDrawable(new SmoothProgressDrawable.Builder(this)
+                        .color(0xff0000)
+                        .interpolator(new DecelerateInterpolator())
+                        .sectionsCount(4)
+                        .separatorLength(8)         //You should use Resources#getDimensionPixelSize
+                        .strokeWidth(8f)            //You should use Resources#getDimension
+                        .speed(2f)                 //2 times faster
+                        .progressiveStartSpeed(2)
+                        .progressiveStopSpeed(3.4f)
+                        .reversed(false)
+                        .mirrorMode(false)
+                        .progressiveStart(true)
+                        .build());
+                pd.show();
+                pd.setCancelable(true);
+                addGroups();
+                bindKeys(5, 0); // SOS
+                new Handler().postDelayed(() -> {
+                    subscribeModel(5, 0, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "Subscribe SOS done");
+                }, 5000);
+                new Handler().postDelayed(() -> {
+                    bindKeys(1, 1);
+                    Log.e("ISAE", "bind SD done");
+
+                }, 10000); // Social Distancing
+                new Handler().postDelayed(() -> {
+                    subscribeModel(1, 1, Integer.valueOf("C002", 16));
+                    Log.e("ISAE", "Subscribe SD done");
+                }, 15000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(2, 0);
+                    Log.e("ISAE", "bind Here done");
+                }, 20000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(2, 0, Integer.valueOf("C004", 16));
+                    Log.e("ISAE", "Subscribe Here done");
+                }, 25000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(3, 0);
+                    Log.e("ISAE", "bind Left done");
+                }, 30000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(3, 0, Integer.valueOf("C005", 16));
+                    Log.e("ISAE", "Subscribe Left done");
+                }, 35000);
+
+                new Handler().postDelayed(() -> {
+                    bindKeys(4, 0);
+                    Log.e("ISAE", "bind Detect done");
+                }, 40000);
+
+                new Handler().postDelayed(() -> {
+                    subscribeModel(4, 0, Integer.valueOf("C006", 16));
+                    Log.e("ISAE", "Subscribe Detect done");
+                }, 45000);
+
+                new Handler().postDelayed(pd::dismiss, 50000);
+
+            } else {
+                Toast.makeText(getApplicationContext(), "Please connect to the device!", Toast.LENGTH_SHORT).show();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            if (pd.isShowing()) pd.dismiss();
             Log.e("ERROR", Objects.requireNonNull(e.getMessage()));
         }
     }
@@ -805,8 +937,6 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         final MeshModel meshModel = new ArrayList<>(
                 mElements.get(elemIndex).getMeshModels().values()).get(modelIndex);
 
-//        mViewModel.setSelectedElement(mElements.get(elemIndex));
-//        mViewModel.setSelectedModel(meshModel);
         mcViewModel.getMessageQueue().clear();
         pViewModel.setLabelUUID(null);
         pViewModel.setPublishAddress(address);
@@ -815,6 +945,39 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
         onDestinationAddressSet(address);
         setPublication();
     }
+
+    private void subscribeModel(int elemIndex, int modelIndex, int address) {
+        final MeshNetwork network = mViewModel.getNetworkLiveData().getMeshNetwork();
+        final MeshModel meshModel = new ArrayList<>(
+                mElements.get(elemIndex).getMeshModels().values()).get(modelIndex);
+        final Group group = network.getGroup(address);
+        mViewModel.setSelectedElement(mElements.get(elemIndex));
+        mViewModel.setSelectedModel(meshModel);
+        subscribe(group);
+    }
+
+    @Override
+    public void subscribe(final Group group) {
+        final ProvisionedMeshNode meshNode = mViewModel.getSelectedMeshNode().getValue();
+        if (meshNode != null) {
+            final Element element = mViewModel.getSelectedElement().getValue();
+            if (element != null) {
+                final int elementAddress = element.getElementAddress();
+                final MeshModel model = mViewModel.getSelectedModel().getValue();
+                if (model != null) {
+                    final int modelIdentifier = model.getModelId();
+                    final MeshMessage configModelSubscriptionAdd;
+                    if (group.getAddressLabel() == null) {
+                        configModelSubscriptionAdd = new ConfigModelSubscriptionAdd(elementAddress, group.getAddress(), modelIdentifier);
+                    } else {
+                        configModelSubscriptionAdd = new ConfigModelSubscriptionVirtualAddressAdd(elementAddress, group.getAddressLabel(), modelIdentifier);
+                    }
+                    sendMessage(configModelSubscriptionAdd);
+                }
+            }
+        }
+    }
+
 
     private void setPublication() {
         final ProvisionedMeshNode node = pViewModel.getSelectedMeshNode().getValue();
@@ -831,7 +994,7 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                     Log.e("ISAE", ex.getMessage());
                     ex.printStackTrace();
                 }
-            }else{
+            } else {
                 Log.e("ISAE", "ConfigModel is null");
             }
         }
