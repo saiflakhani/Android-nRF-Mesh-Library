@@ -676,22 +676,22 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                 pd.show();
                 pd.setCancelable(false);
                 addGroups();
-                bindKeys(1, 1);
+                bindKeys(0, 2);
                 mHandler.postDelayed(() -> {
-                    publishToModel(1, 1, Integer.valueOf("C002", 16));
+                    subscribeModel(0, 2, Integer.valueOf("C002", 16));
                 }, 5000);
                 Handler handler2 = new Handler();
-                handler2.postDelayed(() -> bindKeys(2, 0), 10000);
+                handler2.postDelayed(() -> bindKeys(1, 0), 10000);
                 Handler handler3 = new Handler();
-                handler3.postDelayed(() -> publishToModel(2, 0, Integer.valueOf("C000", 16)), 15000);
+                handler3.postDelayed(() -> publishToModel(1, 0, Integer.valueOf("C003", 16)), 15000);
                 Handler handler4 = new Handler();
-                handler4.postDelayed(() -> bindKeys(0, 2), 20000);
+                handler4.postDelayed(() -> bindKeys(2, 0), 20000);
                 Handler handler5 = new Handler();
-                handler5.postDelayed(() -> publishToModel(0, 2, Integer.valueOf("C003", 16)), 25000);
+                handler5.postDelayed(() -> publishToModel(2, 0, Integer.valueOf("C005", 16)), 25000);
                 Handler handler6 = new Handler();
-                handler6.postDelayed(() -> bindKeys(1, 0), 30000);
+                handler6.postDelayed(() -> bindKeys(2, 1), 30000);
                 new Handler().postDelayed(() -> {
-                    subscribeModel(1, 0, Integer.valueOf("C001", 16));
+                    publishToModel(2, 1, Integer.valueOf("C004", 16));
                 }, 35000);
                 final Handler handler = new Handler();
                 handler.postDelayed(pd::dismiss, 40000);
@@ -729,88 +729,68 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                 pd.setCancelable(true);
                 addGroups();
 
-                bindKeys(5, 0); // SOS
+                bindKeys(0, 2); // R_To_G
                 new Handler().postDelayed(() -> {
-                    publishToModel(5, 0, Integer.valueOf("C000", 16));
-                    Log.e("ISAE", "1 done");
+                    publishToModel(0, 2, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "Publish R to G done");
                 }, 5000);
 
                 new Handler().postDelayed(() -> {
-                    subscribeModel(5, 0, Integer.valueOf("C000", 16));
-                    Log.e("ISAE", "Subscribe SOS done");
+                    subscribeModel(0, 2, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "Subscribe R To G done");
                 }, 10000);
 
                 new Handler().postDelayed(() -> {
                     bindKeys(1, 0);
-                    Log.e("ISAE", "bind tick tock done");
+                    Log.e("ISAE", "bind G to R done");
                 }, 15000); // Tick Tock
 
                 new Handler().postDelayed(() -> {
                     publishToModel(1, 0, Integer.valueOf("C001", 16));
-                    Log.e("ISAE", "publish tick tock done");
+                    Log.e("ISAE", "publish G to R done");
                 }, 20000);
 
                 new Handler().postDelayed(() -> {
-                    bindKeys(1, 1);
-                    Log.e("ISAE", "bind SD done");
-                }, 25000); // Social Distancing
-
-                new Handler().postDelayed(() -> {
-                    publishToModel(1, 1, Integer.valueOf("C002", 16));
-                    Log.e("ISAE", "Publish SD done");
-                }, 30000);
-
-                new Handler().postDelayed(() -> {
-                    subscribeModel(1, 1, Integer.valueOf("C002", 16));
-                    Log.e("ISAE", "Subscribe SD Done");
-                }, 35000);
+                    subscribeModel(1, 0, Integer.valueOf("C001", 16));
+                    Log.e("ISAE", "Subscribe G To R done");
+                }, 25000);
 
                 new Handler().postDelayed(() -> {
                     bindKeys(2, 0);
-                    Log.e("ISAE", "Bind here done");
-                }, 40000); // Here
+                    Log.e("ISAE", "bind R to L done");
+                }, 30000);
 
                 new Handler().postDelayed(() -> {
-                    publishToModel(2, 0, Integer.valueOf("C004", 16));
-                    Log.e("ISAE", "Publish Here done");
-                }, 45000);
-
-                new Handler().postDelayed(() -> {
-                    subscribeModel(2, 0, Integer.valueOf("C004", 16));
-                    Log.e("ISAE", "Subscribe Here Done");
-                }, 50000);
+                    publishToModel(2, 0, Integer.valueOf("C002", 16));
+                    Log.e("ISAE", "Publish R to L done");
+                }, 35000);
 
                 new Handler().postDelayed(() -> {
                     bindKeys(3, 0);
-                    Log.e("ISAE", "Bind left done");
-                }, 55000); // Left
+                    Log.e("ISAE", "Bind L to R done");
+                }, 40000);
 
                 new Handler().postDelayed(() -> {
-                    publishToModel(3, 0, Integer.valueOf("C005", 16));
-                    Log.e("ISAE", "Publish left done");
-                }, 60000);
-
-                new Handler().postDelayed(() -> {
-                    subscribeModel(3, 0, Integer.valueOf("C005", 16));
-                    Log.e("ISAE", "Subscribe left Done");
-                }, 65000);
+                    subscribeModel(3, 0, Integer.valueOf("C003", 16));
+                    Log.e("ISAE", "Subscribe L to R Done");
+                }, 45000);
 
                 new Handler().postDelayed(() -> {
                     bindKeys(4, 0);
-                    Log.e("ISAE", "Bind detect done");
-                }, 70000); // Detect
+                    Log.e("ISAE", "Bind L R G done");
+                }, 50000);
 
                 new Handler().postDelayed(() -> {
-                    publishToModel(4, 0, Integer.valueOf("C006", 16));
-                    Log.e("ISAE", "publish detect done");
-                }, 75000);
+                    publishToModel(4, 0, Integer.valueOf("C004", 16));
+                    Log.e("ISAE", "Publish L R G done");
+                }, 55000);
 
                 new Handler().postDelayed(() -> {
-                    subscribeModel(4, 0, Integer.valueOf("C006", 16));
-                    Log.e("ISAE", "Subscribe detect Done");
-                }, 80000);
+                    subscribeModel(4, 0, Integer.valueOf("C004", 16));
+                    Log.e("ISAE", "Subscribe L R G Done");
+                }, 60000);
 
-                new Handler().postDelayed(pd::dismiss, 85000);
+                new Handler().postDelayed(pd::dismiss, 65000);
 
 
             } else {
@@ -845,50 +825,30 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
                 pd.show();
                 pd.setCancelable(true);
                 addGroups();
-                bindKeys(5, 0); // SOS
+                bindKeys(0, 2);
                 new Handler().postDelayed(() -> {
-                    subscribeModel(5, 0, Integer.valueOf("C000", 16));
-                    Log.e("ISAE", "Subscribe SOS done");
+                    subscribeModel(0, 2, Integer.valueOf("C000", 16));
+                    Log.e("ISAE", "Subscribe R to G done");
                 }, 5000);
                 new Handler().postDelayed(() -> {
-                    bindKeys(1, 1);
-                    Log.e("ISAE", "bind SD done");
+                    bindKeys(1, 0);
+                    Log.e("ISAE", "bind G to R done");
 
                 }, 10000); // Social Distancing
                 new Handler().postDelayed(() -> {
-                    subscribeModel(1, 1, Integer.valueOf("C002", 16));
-                    Log.e("ISAE", "Subscribe SD done");
+                    publishToModel(1, 0, Integer.valueOf("C001", 16));
+                    Log.e("ISAE", "Publish G to R done");
                 }, 15000);
 
                 new Handler().postDelayed(() -> {
                     bindKeys(2, 0);
-                    Log.e("ISAE", "bind Here done");
+                    Log.e("ISAE", "bind L R G done");
                 }, 20000);
 
                 new Handler().postDelayed(() -> {
                     subscribeModel(2, 0, Integer.valueOf("C004", 16));
-                    Log.e("ISAE", "Subscribe Here done");
+                    Log.e("ISAE", "Subscribe L R G done");
                 }, 25000);
-
-                new Handler().postDelayed(() -> {
-                    bindKeys(3, 0);
-                    Log.e("ISAE", "bind Left done");
-                }, 30000);
-
-                new Handler().postDelayed(() -> {
-                    subscribeModel(3, 0, Integer.valueOf("C005", 16));
-                    Log.e("ISAE", "Subscribe Left done");
-                }, 35000);
-
-                new Handler().postDelayed(() -> {
-                    bindKeys(4, 0);
-                    Log.e("ISAE", "bind Detect done");
-                }, 40000);
-
-                new Handler().postDelayed(() -> {
-                    subscribeModel(4, 0, Integer.valueOf("C006", 16));
-                    Log.e("ISAE", "Subscribe Detect done");
-                }, 45000);
 
                 new Handler().postDelayed(pd::dismiss, 50000);
 
@@ -905,13 +865,13 @@ public class NodeConfigurationActivity extends AppCompatActivity implements Inje
 
     private void addGroups() {
         try {
-            onGroupAdded("SOS", Integer.valueOf("C000", 16));
-            onGroupAdded("TickTock", Integer.valueOf("C001", 16));
-            onGroupAdded("Social Distancing", Integer.valueOf("C002", 16));
-            onGroupAdded("SD_Adv", Integer.valueOf("C003", 16));
-            onGroupAdded("Here", Integer.valueOf("C004", 16));
-            onGroupAdded("Left", Integer.valueOf("C005", 16));
-            onGroupAdded("Detect", Integer.valueOf("C006", 16));
+            onGroupAdded("R_to_G", Integer.valueOf("C000", 16));
+            onGroupAdded("G_to_R", Integer.valueOf("C001", 16));
+            onGroupAdded("R_to_L", Integer.valueOf("C002", 16));
+            onGroupAdded("L_to_R", Integer.valueOf("C003", 16));
+            onGroupAdded("L_R_G", Integer.valueOf("C004", 16));
+            onGroupAdded("L", Integer.valueOf("C005", 16));
+            //onGroupAdded("Detect", Integer.valueOf("C006", 16));
         } catch (IllegalArgumentException e) {
             Log.e("ISAE", "Groups already exist, proceeding");
         }
